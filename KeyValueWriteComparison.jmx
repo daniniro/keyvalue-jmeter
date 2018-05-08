@@ -322,7 +322,7 @@ catch(Exception e){
             <hashTree/>
           </hashTree>
           <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Persistent" enabled="true">
-            <stringProp name="IfController.condition">${COUCHBASE_IN_MEMORY}</stringProp>
+            <stringProp name="IfController.condition">${COUCHBASE_PERSISTENT}</stringProp>
             <boolProp name="IfController.evaluateAll">false</boolProp>
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
@@ -356,7 +356,7 @@ catch(Exception e){
             <hashTree/>
           </hashTree>
           <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If In Memory" enabled="true">
-            <stringProp name="IfController.condition">${COUCHBASE_PERSISTENT}</stringProp>
+            <stringProp name="IfController.condition">${COUCHBASE_IN_MEMORY}</stringProp>
             <boolProp name="IfController.evaluateAll">false</boolProp>
             <boolProp name="IfController.useExpression">true</boolProp>
           </IfController>
