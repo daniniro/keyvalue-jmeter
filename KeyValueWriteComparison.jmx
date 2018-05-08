@@ -206,6 +206,7 @@ import com.couchbase.client.*;
 import java.util.*;
 import java.lang.*;
 
+((Bucket)props.put(&quot;BUCKET&quot;,bucket)).close();
 ((Cluster)props.get(&quot;CLUSTER&quot;)).disconnect();
 log.info(&quot;Cluster disconnected&quot;);
 
