@@ -8,11 +8,6 @@
       <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
         <collectionProp name="Arguments.arguments">
-          <elementProp name="CLUSTER_NAME" elementType="Argument">
-            <stringProp name="Argument.name">CLUSTER_NAME</stringProp>
-            <stringProp name="Argument.value">${__P(CLUSTER_NAME,172.31.47.109)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
           <elementProp name="CLUSTER_USERNAME" elementType="Argument">
             <stringProp name="Argument.name">CLUSTER_USERNAME</stringProp>
             <stringProp name="Argument.value">${__P(USERNAME,Administrator)}</stringProp>
@@ -28,9 +23,24 @@
             <stringProp name="Argument.value">${__P(BUCKET,PERSISTENT_1)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="COUCHBASE_CLUSTER_NAME" elementType="Argument">
+            <stringProp name="Argument.name">COUCHBASE_CLUSTER_NAME</stringProp>
+            <stringProp name="Argument.value">172.31.47.109</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="REDIS_CLUSTER_NAME" elementType="Argument">
+            <stringProp name="Argument.name">REDIS_CLUSTER_NAME</stringProp>
+            <stringProp name="Argument.value">172.31.35.131</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
           <elementProp name="TYPE" elementType="Argument">
             <stringProp name="Argument.name">TYPE</stringProp>
-            <stringProp name="Argument.value">${__P(TYPE,COUCHBASE)}</stringProp>
+            <stringProp name="Argument.value">${__P(TYPE,REDIS)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="CLUSTER_NAME" elementType="Argument">
+            <stringProp name="Argument.name">CLUSTER_NAME</stringProp>
+            <stringProp name="Argument.value">${__P(CLUSTER_NAME,172.31.35.131)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -51,7 +61,7 @@
         <stringProp name="ThreadGroup.delay"></stringProp>
       </SetupThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Redis" enabled="false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Redis" enabled="true">
           <stringProp name="IfController.condition">${IS_REDIS}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -62,25 +72,36 @@
             <stringProp name="filename"></stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="script">import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
+import redis.clients.jedis.JedisPool;
+import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonObject;
 import java.util.*;
 import java.lang.*;
 
 Set hosts = new HashSet();
-hosts.add(new HostAndPort((String)vars.getObject(&quot;CLUSTER_NAME&quot;), 6379));
+hosts.add(new HostAndPort(&quot;172.31.35.131&quot;, 6379));
 JedisCluster cluster = new JedisCluster(hosts);
+log.info(&quot;Hosts: &quot;+hosts);
 
 props.put(&quot;CLUSTER&quot;,cluster);
 log.info(&quot;Cluster opened: &quot;+cluster);
 
+JsonDocument document = JsonDocument.create(&quot;0&quot;, JsonObject.create().fromJson(&quot;{}&quot;));
+cluster.set(&quot;0&quot;, document.content().toString());
+cluster.del(&quot;0&quot;);
 
-//First connection is the slowest 
-//bucket.bucketManager().flush();
-/*
-JsonDocument doc = JsonDocument.create(&quot;0&quot;, JsonObject.create().fromJson(&quot;{}&quot;));
-bucket.upsert(doc,PersistTo.NONE);
-bucket.remove(&quot;0&quot;);*/
+//Clean all nodes in cluster
+for (JedisPool pool : cluster.getClusterNodes().values()) {
 
+            try {
+            	 Jedis jedis = pool.getResource();
+                jedis.flushAll();
+            } catch (Exception ex) {
+                throw ex;
+            }
+        }
 
 
 </stringProp>
@@ -162,7 +183,7 @@ bucket.remove(&quot;0&quot;);
         <stringProp name="ThreadGroup.delay"></stringProp>
       </PostThreadGroup>
       <hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Redis" enabled="false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Redis" enabled="true">
           <stringProp name="IfController.condition">${IS_REDIS}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
@@ -219,7 +240,7 @@ log.info(&quot;Cluster disconnected&quot;);
       <com.blazemeter.jmeter.threads.concurrency.ConcurrencyThreadGroup guiclass="com.blazemeter.jmeter.threads.concurrency.ConcurrencyThreadGroupGui" testclass="com.blazemeter.jmeter.threads.concurrency.ConcurrencyThreadGroup" testname="bzm - Concurrency Thread Group" enabled="true">
         <elementProp name="ThreadGroup.main_controller" elementType="com.blazemeter.jmeter.control.VirtualUserController"/>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <stringProp name="TargetLevel">${__tstFeedback(tst,1,100,10)}</stringProp>
+        <stringProp name="TargetLevel">${__tstFeedback(tst,1,100,20)}</stringProp>
         <stringProp name="RampUp">0</stringProp>
         <stringProp name="Steps">1</stringProp>
         <stringProp name="Hold">3</stringProp>
@@ -392,17 +413,41 @@ catch(Exception e){
             <hashTree/>
           </hashTree>
         </hashTree>
-        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Redis" enabled="false">
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Redis" enabled="true">
           <stringProp name="IfController.condition">${IS_REDIS}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler" enabled="true">
+          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler" enabled="false">
             <boolProp name="displayJMeterProperties">false</boolProp>
             <boolProp name="displayJMeterVariables">true</boolProp>
             <boolProp name="displaySystemProperties">false</boolProp>
           </DebugSampler>
+          <hashTree/>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Redis" enabled="true">
+            <stringProp name="scriptLanguage">java</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonObject;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisCluster;
+
+
+
+
+ try {
+ 		  JedisCluster cluster = ((JedisCluster)props.get(&quot;CLUSTER&quot;));
+            JsonDocument document = JsonDocument.create(vars.get(&quot;key&quot;), JsonObject.create().fromJson(vars.get(&quot;json&quot;)));
+            cluster.set(document.id(), document.content().toString());
+           
+        } catch (Exception e) {
+            log.error(&quot;Cannot write&quot;, e);
+            SampleResult.setSuccessful(false);
+        }</stringProp>
+          </JSR223Sampler>
           <hashTree/>
         </hashTree>
       </hashTree>
