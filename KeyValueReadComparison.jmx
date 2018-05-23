@@ -25,7 +25,7 @@
           </elementProp>
           <elementProp name="BUCKET_NAME" elementType="Argument">
             <stringProp name="Argument.name">BUCKET_NAME</stringProp>
-            <stringProp name="Argument.value">${__P(BUCKET,PERSISTENT_2)}</stringProp>
+            <stringProp name="Argument.value">${__P(BUCKET,IN_MEMORY)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="TYPE" elementType="Argument">
@@ -36,6 +36,16 @@
           <elementProp name="MAX_ID" elementType="Argument">
             <stringProp name="Argument.name">MAX_ID</stringProp>
             <stringProp name="Argument.value">${__P(MAX_ID,1000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="COUCHBASE_CLUSTER_NAME" elementType="Argument">
+            <stringProp name="Argument.name">COUCHBASE_CLUSTER_NAME</stringProp>
+            <stringProp name="Argument.value">172.31.47.109</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="REDIS_CLUSTER_NAME" elementType="Argument">
+            <stringProp name="Argument.name">REDIS_CLUSTER_NAME</stringProp>
+            <stringProp name="Argument.value">172.31.35.131</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -56,23 +66,70 @@
         <stringProp name="ThreadGroup.delay"></stringProp>
       </SetupThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Prepare Buckets" enabled="true">
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="script">import com.couchbase.client.java.Bucket;
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Redis" enabled="true">
+          <stringProp name="IfController.condition">${IS_REDIS}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Prepare Cluster" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="script">import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
+import redis.clients.jedis.JedisPool;
+import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonObject;
+import java.util.*;
+import java.lang.*;
+
+Set hosts = new HashSet();
+hosts.add(new HostAndPort(&quot;172.31.35.131&quot;, 6379));
+JedisCluster cluster = new JedisCluster(hosts);
+log.info(&quot;Hosts: &quot;+hosts);
+
+props.put(&quot;CLUSTER&quot;,cluster);
+log.info(&quot;Cluster opened: &quot;+cluster);
+
+JsonDocument document = JsonDocument.create(&quot;0&quot;, JsonObject.create().fromJson(&quot;{}&quot;));
+cluster.set(&quot;0&quot;, document.content().toString());
+cluster.del(&quot;0&quot;);
+
+
+
+
+</stringProp>
+            <stringProp name="scriptLanguage">java</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Couchbase" enabled="true">
+          <stringProp name="IfController.condition">${IS_COUCHBASE}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Prepare Buckets" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="script">import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.*;
+import com.couchbase.client.java.env.*;
 import java.util.*;
 import java.lang.*;
 
+CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder().connectTimeout(20000).kvTimeout(20000).build();
 List nodes = new ArrayList();
 nodes.add(vars.getObject(&quot;CLUSTER_NAME&quot;));
-Cluster cluster = CouchbaseCluster.create(nodes);
+Cluster cluster = CouchbaseCluster.create(env,nodes);
 cluster.authenticate((String)vars.getObject(&quot;CLUSTER_USERNAME&quot;), (String) vars.getObject(&quot;CLUSTER_PASSWORD&quot;));
 props.put(&quot;CLUSTER&quot;,cluster);
 log.info(&quot;Cluster opened: &quot;+cluster);
@@ -90,9 +147,10 @@ bucket.remove(&quot;0&quot;);
 
 
 </stringProp>
-          <stringProp name="scriptLanguage">java</stringProp>
-        </JSR223Sampler>
-        <hashTree/>
+            <stringProp name="scriptLanguage">java</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -120,11 +178,41 @@ bucket.remove(&quot;0&quot;);
         <stringProp name="ThreadGroup.delay"></stringProp>
       </PostThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Close Buckets" enabled="true">
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="script">import com.couchbase.client.java.Bucket;
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Redis" enabled="true">
+          <stringProp name="IfController.condition">${IS_REDIS}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Close Buckets" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="script">import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisCluster;
+import java.util.*;
+import java.lang.*;
+
+
+((JedisCluster)props.get(&quot;CLUSTER&quot;)).close();
+log.info(&quot;Cluster disconnected&quot;);
+
+</stringProp>
+            <stringProp name="scriptLanguage">java</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Couchbase" enabled="true">
+          <stringProp name="IfController.condition">${IS_COUCHBASE}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Close Cluster" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="script">import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.PersistTo;
@@ -134,20 +222,20 @@ import com.couchbase.client.*;
 import java.util.*;
 import java.lang.*;
 
-((Bucket)props.get(&quot;BUCKET&quot;)).close();
-log.info(&quot;Bucket closed&quot;);
+((Bucket)props.put(&quot;BUCKET&quot;,bucket)).close();
 ((Cluster)props.get(&quot;CLUSTER&quot;)).disconnect();
 log.info(&quot;Cluster disconnected&quot;);
 
 </stringProp>
-          <stringProp name="scriptLanguage">java</stringProp>
-        </JSR223Sampler>
-        <hashTree/>
+            <stringProp name="scriptLanguage">java</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
       </hashTree>
       <com.blazemeter.jmeter.threads.concurrency.ConcurrencyThreadGroup guiclass="com.blazemeter.jmeter.threads.concurrency.ConcurrencyThreadGroupGui" testclass="com.blazemeter.jmeter.threads.concurrency.ConcurrencyThreadGroup" testname="bzm - Concurrency Thread Group" enabled="true">
         <elementProp name="ThreadGroup.main_controller" elementType="com.blazemeter.jmeter.control.VirtualUserController"/>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <stringProp name="TargetLevel">${__tstFeedback(tst,1,100,10)}</stringProp>
+        <stringProp name="TargetLevel">${__tstFeedback(tst,1,100,20)}</stringProp>
         <stringProp name="RampUp">0</stringProp>
         <stringProp name="Steps">1</stringProp>
         <stringProp name="Hold">3</stringProp>
@@ -156,16 +244,6 @@ log.info(&quot;Cluster disconnected&quot;);
         <stringProp name="Unit">M</stringProp>
       </com.blazemeter.jmeter.threads.concurrency.ConcurrencyThreadGroup>
       <hashTree>
-        <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-          <collectionProp name="Arguments.arguments">
-            <elementProp name="IS_COUCHBASE" elementType="Argument">
-              <stringProp name="Argument.name">IS_COUCHBASE</stringProp>
-              <stringProp name="Argument.value">${__groovy(vars.get(&quot;TYPE&quot;).equalsIgnoreCase(&quot;COUCHBASE&quot;))}</stringProp>
-              <stringProp name="Argument.metadata">=</stringProp>
-            </elementProp>
-          </collectionProp>
-        </Arguments>
-        <hashTree/>
         <kg.apc.jmeter.timers.VariableThroughputTimer guiclass="kg.apc.jmeter.timers.VariableThroughputTimerGui" testclass="kg.apc.jmeter.timers.VariableThroughputTimer" testname="tst" enabled="true">
           <collectionProp name="load_profile">
             <collectionProp name="-1147503684">
@@ -218,6 +296,43 @@ try {
 	String id = (String) vars.get(&quot;key&quot;);
 	JsonDocument doc = bucket.get(id);
 	if (doc == null || !doc.id().equalsIgnoreCase(id)){
+		throw new Exception(&quot;Can&apos;t find document &quot;+id);
+	}
+}
+catch(Exception e){
+	log.error(&quot;Cannot read&quot;,e);
+	SampleResult.setSuccessful(false);
+}
+</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Redis" enabled="true">
+          <stringProp name="IfController.condition">${IS_REDIS}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Redis Read" enabled="true">
+            <stringProp name="scriptLanguage">java</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
+import redis.clients.jedis.JedisPool;
+import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonObject;
+import java.util.*;
+import java.lang.*;
+
+
+try {
+	JedisCluster cluster = ((JedisCluster)props.get(&quot;CLUSTER&quot;));
+	String id = (String) vars.get(&quot;key&quot;);
+	String doc = cluster.get(id);
+	if (doc == null ){
 		throw new Exception(&quot;Can&apos;t find document &quot;+id);
 	}
 }
@@ -426,7 +541,7 @@ catch(Exception e){
         <boolProp name="exclude_checkbox_state">false</boolProp>
       </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
       <hashTree/>
-      <kg.apc.jmeter.reporters.LoadosophiaUploader guiclass="kg.apc.jmeter.reporters.LoadosophiaUploaderGui" testclass="kg.apc.jmeter.reporters.LoadosophiaUploader" testname="bzm - BlazeMeter Sense Uploader" enabled="false">
+      <kg.apc.jmeter.reporters.LoadosophiaUploader guiclass="kg.apc.jmeter.reporters.LoadosophiaUploaderGui" testclass="kg.apc.jmeter.reporters.LoadosophiaUploader" testname="bzm - BlazeMeter Sense Uploader" enabled="true">
         <elementProp name="arguments" elementType="Arguments">
           <collectionProp name="Arguments.arguments"/>
         </elementProp>
@@ -438,6 +553,36 @@ catch(Exception e){
         <stringProp name="title">READ_${__P(&quot;BUCKET_NAME&quot;)}</stringProp>
         <boolProp name="useOnline">true</boolProp>
       </kg.apc.jmeter.reporters.LoadosophiaUploader>
+      <hashTree/>
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="COUCHBASE_PERSISTENT" elementType="Argument">
+            <stringProp name="Argument.name">COUCHBASE_PERSISTENT</stringProp>
+            <stringProp name="Argument.value">${__groovy(vars.get(&quot;BUCKET_NAME&quot;).equalsIgnoreCase(&quot;PERSISTENT_1&quot;))}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="COUCHBASE_DURABLE" elementType="Argument">
+            <stringProp name="Argument.name">COUCHBASE_DURABLE</stringProp>
+            <stringProp name="Argument.value">${__groovy(vars.get(&quot;BUCKET_NAME&quot;).equalsIgnoreCase(&quot;PERSISTENT_2&quot;))}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="COUCHBASE_IN_MEMORY" elementType="Argument">
+            <stringProp name="Argument.name">COUCHBASE_IN_MEMORY</stringProp>
+            <stringProp name="Argument.value">${__groovy(vars.get(&quot;BUCKET_NAME&quot;).equalsIgnoreCase(&quot;IN_MEMORY_1&quot;))}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="IS_COUCHBASE" elementType="Argument">
+            <stringProp name="Argument.name">IS_COUCHBASE</stringProp>
+            <stringProp name="Argument.value">${__groovy(vars.get(&quot;TYPE&quot;).equalsIgnoreCase(&quot;COUCHBASE&quot;))}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="IS_REDIS" elementType="Argument">
+            <stringProp name="Argument.name">IS_REDIS</stringProp>
+            <stringProp name="Argument.value">${__groovy(vars.get(&quot;TYPE&quot;).equalsIgnoreCase(&quot;REDIS&quot;))}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
       <hashTree/>
     </hashTree>
   </hashTree>
