@@ -25,22 +25,27 @@
           </elementProp>
           <elementProp name="COUCHBASE_CLUSTER_NAME" elementType="Argument">
             <stringProp name="Argument.name">COUCHBASE_CLUSTER_NAME</stringProp>
-            <stringProp name="Argument.value">172.31.47.109</stringProp>
+            <stringProp name="Argument.value">172.31.48.212</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="REDIS_CLUSTER_NAME" elementType="Argument">
             <stringProp name="Argument.name">REDIS_CLUSTER_NAME</stringProp>
-            <stringProp name="Argument.value">172.31.35.131</stringProp>
+            <stringProp name="Argument.value">172.31.48.32</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="TYPE" elementType="Argument">
             <stringProp name="Argument.name">TYPE</stringProp>
-            <stringProp name="Argument.value">${__P(TYPE,REDIS)}</stringProp>
+            <stringProp name="Argument.value">${__P(TYPE,COUCHBASE)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="CLUSTER_NAME" elementType="Argument">
             <stringProp name="Argument.name">CLUSTER_NAME</stringProp>
-            <stringProp name="Argument.value">${__P(CLUSTER_NAME,172.31.35.131)}</stringProp>
+            <stringProp name="Argument.value">${__P(CLUSTER_NAME,172.31.48.212)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="TEMP_DIR" elementType="Argument">
+            <stringProp name="Argument.name">TEMP_DIR</stringProp>
+            <stringProp name="Argument.value">${__P(&quot;TEMP_DIR&quot;,/tmp)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -652,11 +657,11 @@ import redis.clients.jedis.JedisCluster;
           <collectionProp name="Arguments.arguments"/>
         </elementProp>
         <stringProp name="classname">kg.apc.jmeter.reporters.LoadosophiaClient</stringProp>
-        <stringProp name="project">DEFAULT</stringProp>
+        <stringProp name="project">WRITE</stringProp>
         <stringProp name="uploadToken">FWb7fCA1Dub3tiiOlRyt/.cxHzb9fzlsttBbeOBsMUd4M.yclZ7RG</stringProp>
-        <stringProp name="storeDir">C:\Temp</stringProp>
+        <stringProp name="storeDir">${TEMP_DIR}</stringProp>
         <stringProp name="color">none</stringProp>
-        <stringProp name="title">${__P(&quot;BUCKET_NAME&quot;)}</stringProp>
+        <stringProp name="title"></stringProp>
         <boolProp name="useOnline">true</boolProp>
       </kg.apc.jmeter.reporters.LoadosophiaUploader>
       <hashTree/>
