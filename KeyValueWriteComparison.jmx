@@ -35,12 +35,12 @@
           </elementProp>
           <elementProp name="TYPE" elementType="Argument">
             <stringProp name="Argument.name">TYPE</stringProp>
-            <stringProp name="Argument.value">${__P(TYPE,COUCHBASE)}</stringProp>
+            <stringProp name="Argument.value">${__P(TYPE,REDIS)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="CLUSTER_NAME" elementType="Argument">
             <stringProp name="Argument.name">CLUSTER_NAME</stringProp>
-            <stringProp name="Argument.value">${__P(CLUSTER_NAME,172.31.48.212)}</stringProp>
+            <stringProp name="Argument.value">${__P(CLUSTER_NAME,172.31.48.32)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="TEMP_DIR" elementType="Argument">
@@ -86,7 +86,7 @@ import java.util.*;
 import java.lang.*;
 
 Set hosts = new HashSet();
-hosts.add(new HostAndPort(&quot;172.31.35.131&quot;, 6379));
+hosts.add(new HostAndPort(vars.getObject(&quot;CLUSTER_NAME&quot;), 6379));
 JedisCluster cluster = new JedisCluster(hosts);
 log.info(&quot;Hosts: &quot;+hosts);
 
